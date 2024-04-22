@@ -4,6 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "build": "tsc index.ts",
+    "postbuild": "zip -r ~/Desktop/index.zip *",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
