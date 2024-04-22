@@ -1,6 +1,5 @@
 import { APIGatewayEvent, APIGatewayProxyHandler, APIGatewayProxyResult } from 'aws-lambda';
 import axios from 'axios';
-import * as AWS from 'aws-sdk';
 
 // Initialize the Lambda client
 // const lambda = new AWS.Lambda();
@@ -10,26 +9,26 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayEvent): P
   try {
     const eventBody = event.body
     if (!eventBody) throw new Error('Body must contain data')
-    const eventBodyJson = JSON.parse(eventBody) as EventJson
+    const eventBodyJson = eventBody as unknown as EventJson
     //TODO: Step 1: Invoke another Lambda function using IAM role
     // const lambdaResponse = await lambda.invoke({
     //   FunctionName: 'your-other-lambda-function-name',
     //   InvocationType: 'RequestResponse'
     // }).promise();
 
-    const tokenLambdaFunctionResponse = await axios.get('https://wrzjvsr99b.execute-api.ca-central-1.amazonaws.com/sandbox/insighthealth-backend-service')
+    const tokenLambdaFunctionResponse = await axios.get('https://d5nfsx63n2.execute-api.ca-central-1.amazonaws.com/sandbox/mindtrace')
 
     // Assuming the Lambda function returns the token directly
-    const token = JSON.parse(tokenLambdaFunctionResponse.data as string).tokenResponse.access_token;
+    const token = tokenLambdaFunctionResponse.data.tokenResponse.access_token;
     const path = eventBodyJson.path
     const queryParams = eventBodyJson.queryParameters
 
     // Step 2: Make an authenticated HTTP request to an API Gateway endpoint
-    const apiResponse = await axios.get(`https://kwfklwibs0.execute-api.ca-central-1.amazonaws.com/${path}`, {
+    const apiResponse = await axios.get(`https://fhir.epic.com/interconnect-fhir-oauth/api/FHIR/${path}`, {
       headers: {
         Authorization: `Bearer ${token}`
       },
-      ...(queryParams ? {params: queryParams} : {})
+      ...(queryParams ? { params: queryParams } : {})
     });
 
     // Step 3: Log the successful execution and return data

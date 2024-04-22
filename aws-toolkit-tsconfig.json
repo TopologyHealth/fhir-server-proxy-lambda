@@ -1,0 +1,16 @@
+{
+    "compilerOptions": {
+        "target": "es6",
+        "module": "commonjs",
+        "inlineSourceMap": true,
+        "outDir": "/Users/work/repos/fhir-server-proxy-lambda",
+        "rootDir": ".",
+        "sourceRoot": "/Users/work/repos/fhir-server-proxy-lambda",
+        "typeRoots": [
+            "node_modules/@types"
+        ],
+        "types": [
+            "node"
+        ]
+    }
+}
