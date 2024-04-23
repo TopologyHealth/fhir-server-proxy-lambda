@@ -16,7 +16,11 @@
             "body": {
               "token_function_name": "backend-service-dev",
               "host": "https://fhir.epic.com/interconnect-fhir-oauth/api/FHIR",
-              "path": "R4/Patient/erXuFYUfucBZaryVksYEcMg3",
+              "path": "R4/Group/e3iabhmS8rsueyz7vaimuiaSmfGvi.QwjVXJANlPOgR83/$export",
+              "queryParameters": {
+                "_type": "Appointment",
+                "_typeFilter": "Appointment%3Fstatus%3Dproposed,Appointment%3Fstatus%3Dpending"
+              }
             }
           }
         }

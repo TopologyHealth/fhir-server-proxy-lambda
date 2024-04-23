@@ -1,6 +1,6 @@
 import { InvokeCommand, LambdaClient } from "@aws-sdk/client-lambda";
 import { APIGatewayEvent, APIGatewayProxyHandler, APIGatewayProxyResult } from 'aws-lambda';
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 
 
 export const handler: APIGatewayProxyHandler = async (event: APIGatewayEvent): Promise<APIGatewayProxyResult> => {
@@ -40,19 +40,19 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayEvent): P
       statusCode: 200,
       body: JSON.stringify({
         message: 'Request successful',
-        apiData: apiResponse.data,
         apiHeaders: apiResponse.headers
       }),
     };
   } catch (err) {
-    const error = err as Error
+    const error = err as AxiosError
     console.error('Error handling the request:', error);
 
     return {
       statusCode: 500,
       body: JSON.stringify({
         message: 'Error handling the request',
-        errorMessage: error.message
+        errorMessage: error.message,
+        reason: error.response?.data
       }),
     };
   }
