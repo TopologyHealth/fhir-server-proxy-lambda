@@ -14,7 +14,9 @@
         "payload": {
           "json": {
             "body": {
-              "path": "R4/Patient/erXuFYUfucBZaryVksYEcMg3"
+              "token_function_name": "backend-service-dev",
+              "host": "https://fhir.epic.com/interconnect-fhir-oauth/api/FHIR",
+              "path": "R4/Patient/erXuFYUfucBZaryVksYEcMg3",
             }
           }
         }
