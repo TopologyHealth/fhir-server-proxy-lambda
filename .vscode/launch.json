@@ -14,7 +14,7 @@
         "payload": {
           "json": {
             "body": {
-              "path": "R4/Appointment?status=proposed&patient=erXuFYUfucBZaryVksYEcMg3"
+              "path": "R4/Patient/erXuFYUfucBZaryVksYEcMg3"
             }
           }
         }

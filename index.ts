@@ -1,8 +1,8 @@
+import { InvokeCommand, LambdaClient } from "@aws-sdk/client-lambda";
 import { APIGatewayEvent, APIGatewayProxyHandler, APIGatewayProxyResult } from 'aws-lambda';
 import axios from 'axios';
 
 // Initialize the Lambda client
-// const lambda = new AWS.Lambda();
 
 // Define the handler function
 export const handler: APIGatewayProxyHandler = async (event: APIGatewayEvent): Promise<APIGatewayProxyResult> => {
@@ -10,16 +10,20 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayEvent): P
     const eventBody = event.body
     if (!eventBody) throw new Error('Body must contain data')
     const eventBodyJson = eventBody as unknown as EventJson
-    //TODO: Step 1: Invoke another Lambda function using IAM role
-    // const lambdaResponse = await lambda.invoke({
-    //   FunctionName: 'your-other-lambda-function-name',
-    //   InvocationType: 'RequestResponse'
-    // }).promise();
 
-    const tokenLambdaFunctionResponse = await axios.get('https://d5nfsx63n2.execute-api.ca-central-1.amazonaws.com/sandbox/mindtrace')
+    //Step 1: Invoke another Lambda function using IAM role
+    const lambda = new LambdaClient({});
+    const tokenLambdaFunctionResponse = await lambda.send(new InvokeCommand({
+      FunctionName: 'backend-service-dev',
+      InvocationType: 'RequestResponse'
+    }));
 
+    // const tokenLambdaFunctionResponse = await axios.get('https://d5nfsx63n2.execute-api.ca-central-1.amazonaws.com/sandbox/mindtrace')
+    const { Payload, LogResult } = tokenLambdaFunctionResponse
+    if (!Payload) throw new Error('Payload must be defined.')
+    const payloadAsJson = JSON.parse(Buffer.from(Payload).toString());
     // Assuming the Lambda function returns the token directly
-    const token = tokenLambdaFunctionResponse.data.tokenResponse.access_token;
+    const token = JSON.parse(payloadAsJson.body).tokenResponse.access_token;
     const path = eventBodyJson.path
     const queryParams = eventBodyJson.queryParameters
 
