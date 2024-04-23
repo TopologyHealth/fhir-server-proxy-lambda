@@ -18,8 +18,7 @@
               "host": "https://fhir.epic.com/interconnect-fhir-oauth/api/FHIR",
               "path": "R4/Group/e3iabhmS8rsueyz7vaimuiaSmfGvi.QwjVXJANlPOgR83/$export",
               "queryParameters": {
-                "_type": "Appointment",
-                "_typeFilter": "Appointment?status=proposed,Appointment?status=pending"
+                "_type": "Patient"
               }
             }
           }
