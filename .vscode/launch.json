@@ -19,7 +19,7 @@
               "path": "R4/Group/e3iabhmS8rsueyz7vaimuiaSmfGvi.QwjVXJANlPOgR83/$export",
               "queryParameters": {
                 "_type": "Appointment",
-                "_typeFilter": "Appointment%3Fstatus%3Dproposed,Appointment%3Fstatus%3Dpending"
+                "_typeFilter": "Appointment?status=proposed,Appointment?status=pending"
               }
             }
           }

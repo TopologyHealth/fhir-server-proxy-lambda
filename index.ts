@@ -28,7 +28,9 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayEvent): P
 
     const apiResponse = await axios.get(`${host}/${path}`, {
       headers: {
-        Authorization: `Bearer ${token}`
+        Authorization: `Bearer ${token}`,
+        Accept: `application/fhir+json`,
+        Prefer: `respond-async`
       },
       ...(queryParams ? { params: queryParams } : {})
     });
