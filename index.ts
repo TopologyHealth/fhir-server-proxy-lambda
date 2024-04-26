@@ -19,6 +19,7 @@ type EventJson = {
 
 const FHIR_JSON_TYPE = `json`;
 const NDJSON_TYPE = `ndjson`;
+const TODAYS_DATE_STRING = getCurrentDateFormatted();
 
 export const handler: APIGatewayProxyHandler = async (event: APIGatewayEvent): Promise<APIGatewayProxyResult> => {
   try {
@@ -30,6 +31,18 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayEvent): P
     const fhirServerResponse = await makeFhirServerRequest(eventBodyJson, token);
     const bucketWriteParams = eventBodyJson.bucket_write;
 
+    const bucketGetResponse = async () => {
+      if (bucketWriteParams) {
+        const bucketWriteResult = await writeToBucket(bucketWriteParams, fhirServerResponse);
+        return {
+          bucketWrite: {
+            ...bucketWriteResult,
+            dateString: TODAYS_DATE_STRING
+          }
+        };
+      }
+      return {};
+    };
     const lambdaResponse = {
       statusCode: 200,
       body: {
@@ -38,7 +51,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayEvent): P
           headers: fhirServerResponse.headers,
           data: (bucketWriteParams ? {} : fhirServerResponse.data)
         },
-        ...(bucketWriteParams ? { bucketWrite: await writeToBucket(bucketWriteParams, fhirServerResponse) } : {})
+        ...(await bucketGetResponse())
       },
     };
 
@@ -56,8 +69,7 @@ async function writeToBucket(bucketWriteParams: WithRequired<EventJson, 'bucket_
   const bucketRegion = bucketWriteParams.bucket_region
   const s3Config: S3ClientConfig = { region: bucketRegion };
   const s3 = new S3(s3Config);
-  const todaysDateString = getCurrentDateFormatted();
-  const fileName = `${todaysDateString}/${bucketWriteParams.resource_name}`;
+  const fileName = `${TODAYS_DATE_STRING}/${bucketWriteParams.resource_name}`;
   const resourceContentType = fhirServerResponse.headers["content-type"]?.toString();
   const fileType: string = (resourceContentType?.includes('ndjson') ? NDJSON_TYPE : FHIR_JSON_TYPE);
   const commandInput: PutObjectCommandInput = {
