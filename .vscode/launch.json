@@ -14,12 +14,10 @@
         "payload": {
           "json": {
             "body": {
-              "token_function_name": "backend-service-dev",
+              "token_function_name": "arn:aws:lambda:ca-central-1:105227342372:function:backend-service-dev",
+              "token_function_region": "ca-central-1",
               "host": "https://fhir.epic.com/interconnect-fhir-oauth/api/FHIR",
-              "path": "R4/Group/e3iabhmS8rsueyz7vaimuiaSmfGvi.QwjVXJANlPOgR83/$export",
-              "queryParameters": {
-                "_type": "Patient"
-              }
+              "path": "BulkRequest/00000000000512E1AA7537B861D4E3B3"
             }
           }
         }

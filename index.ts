@@ -9,8 +9,9 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayEvent): P
     if (!eventBody) throw new Error('Body must contain data')
     const eventBodyJson = eventBody as unknown as EventJson
     const tokenFunctionName = eventBodyJson.token_function_name
+    const functionRegion = eventBodyJson.token_function_region
 
-    const lambda = new LambdaClient({});
+    const lambda = new LambdaClient({ ...(functionRegion ? { region: functionRegion } : {}) });
     const tokenLambdaFunctionResponse = await lambda.send(new InvokeCommand({
       FunctionName: tokenFunctionName,
       InvocationType: 'RequestResponse'
@@ -42,7 +43,8 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayEvent): P
       statusCode: 200,
       body: JSON.stringify({
         message: 'Request successful',
-        apiHeaders: apiResponse.headers
+        apiHeaders: apiResponse.headers,
+        apiData: apiResponse.data
       }),
     };
   } catch (err) {
@@ -54,7 +56,8 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayEvent): P
       body: JSON.stringify({
         message: 'Error handling the request',
         errorMessage: error.message,
-        reason: error.response?.data
+        data: error.response?.data,
+        statusText: error.response?.statusText
       }),
     };
   }
@@ -64,5 +67,6 @@ type EventJson = {
   path: string,
   host: string,
   token_function_name: string,
+  token_function_region?: string,
   queryParameters?: any
 }
