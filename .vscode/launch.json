@@ -17,13 +17,8 @@
               "token_function_name": "arn:aws:lambda:ca-central-1:105227342372:function:backend-service-dev",
               "token_function_region": "ca-central-1",
               "host": "https://fhir.epic.com/interconnect-fhir-oauth/api/FHIR",
-              "path": "BulkRequest/00000000000512E1AA7537B861D4E3B3/eqK37AVhzaVqWoOvJgKs3Aw3",
-              "bucket_write": {
-                "bucket_name": "epic-fhir-bulk-export-poc-1",
-                "resource_name": "Patient",
-                "bucket_region": "us-east-2"
-              }
-            }
+              "path": "R4/Group/e3iabhmS8rsueyz7vaimuiaSmfGvi.QwjVXJANlPOgR83/$export"
+            },
           }
         }
       }

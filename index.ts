@@ -1,7 +1,7 @@
 import { InvokeCommand, LambdaClient } from "@aws-sdk/client-lambda";
 import { PutObjectCommand, PutObjectCommandInput, S3, S3ClientConfig } from '@aws-sdk/client-s3';
 import { APIGatewayEvent, APIGatewayProxyHandler, APIGatewayProxyResult } from 'aws-lambda';
-import axios, { AxiosResponse } from 'axios';
+import axios, { AxiosError, AxiosResponse } from 'axios';
 
 type WithRequired<T, K extends keyof T> = T & { [P in K]-?: T[P] }
 type EventJson = {
@@ -17,8 +17,9 @@ type EventJson = {
   }
 }
 
-const FHIR_JSON_TYPE = `json`;
-const NDJSON_TYPE = `ndjson`;
+const JSON_FILE_EXTENSION = `json`;
+const FHIR_JSON_TYPE = `application/fhir+json`
+const NDJSON_FILE_EXTENSION = `ndjson`;
 const TODAYS_DATE_STRING = getCurrentDateFormatted();
 
 export const handler: APIGatewayProxyHandler = async (event: APIGatewayEvent): Promise<APIGatewayProxyResult> => {
@@ -61,9 +62,28 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayEvent): P
       body: JSON.stringify(lambdaResponse.body)
     };
   } catch (err) {
-    return lambdaErrorHandler(err);
+    if (err instanceof AxiosError) {
+      return handleAxiosError(err)
+    }
+    const lambdaResponse = {
+      statusCode: 500,
+      body: '',
+      error: err
+    };
+    console.error('Error handling the request: %o', lambdaResponse);
+    return lambdaResponse;
   }
 };
+
+function handleAxiosError(err: AxiosError<any, any>): APIGatewayProxyResult {
+  return {
+    statusCode: err.status ?? err.response?.status ?? 500,
+    body: JSON.stringify({
+      cause: err.cause,
+      data: err.response?.data
+    })
+  };
+}
 
 async function writeToBucket(bucketWriteParams: WithRequired<EventJson, 'bucket_write'>['bucket_write'], fhirServerResponse: AxiosResponse<any, any>) {
   const bucketRegion = bucketWriteParams.bucket_region
@@ -71,7 +91,7 @@ async function writeToBucket(bucketWriteParams: WithRequired<EventJson, 'bucket_
   const s3 = new S3(s3Config);
   const fileName = `${TODAYS_DATE_STRING}/${bucketWriteParams.resource_name}`;
   const resourceContentType = fhirServerResponse.headers["content-type"]?.toString();
-  const fileType: string = (resourceContentType?.includes('ndjson') ? NDJSON_TYPE : FHIR_JSON_TYPE);
+  const fileType: string = (resourceContentType?.includes('ndjson') ? NDJSON_FILE_EXTENSION : JSON_FILE_EXTENSION);
   const commandInput: PutObjectCommandInput = {
     Bucket: bucketWriteParams.bucket_name,
     Key: `${fileName}.${fileType}`,
@@ -79,19 +99,6 @@ async function writeToBucket(bucketWriteParams: WithRequired<EventJson, 'bucket_
   };
   const command = new PutObjectCommand(commandInput);
   return s3.send(command);
-}
-
-function lambdaErrorHandler(err: unknown) {
-  // const error = err as AxiosError;
-  const lambdaResponse = {
-    statusCode: 500,
-    body: err,
-  };
-  console.error('Error handling the request: %o', lambdaResponse);
-  return {
-    ...(lambdaResponse),
-    body: JSON.stringify(lambdaResponse.body)
-  };
 }
 
 async function makeFhirServerRequest(eventBodyJson: EventJson, token: any) {
