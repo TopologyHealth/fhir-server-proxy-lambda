@@ -1,5 +1,5 @@
 import { InvokeCommand, LambdaClient } from "@aws-sdk/client-lambda";
-import { PutObjectCommand, PutObjectCommandInput, S3, S3ClientConfig } from '@aws-sdk/client-s3';
+import { PutObjectCommand, PutObjectCommandInput, S3, S3ClientConfig, S3ServiceException } from '@aws-sdk/client-s3';
 import { APIGatewayEvent, APIGatewayProxyHandler, APIGatewayProxyResult } from 'aws-lambda';
 import axios, { AxiosError, AxiosResponse } from 'axios';
 
@@ -65,9 +65,12 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayEvent): P
     if (err instanceof AxiosError) {
       return handleAxiosError(err)
     }
+    if (err instanceof S3ServiceException) {
+      return handleS3ServiceExceptionError(err)
+    }
     const lambdaResponse = {
       statusCode: 500,
-      body: '',
+      body: 'Unknown Error Occurred',
       error: err
     };
     console.error('Error handling the request: %o', lambdaResponse);
@@ -75,10 +78,22 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayEvent): P
   }
 };
 
+function handleS3ServiceExceptionError(err: S3ServiceException): APIGatewayProxyResult {
+  return {
+    statusCode: err.$response?.statusCode ?? err.$metadata.httpStatusCode ?? 500,
+    body: JSON.stringify({
+      type: 'S3 Error',
+      cause: err.name,
+      data: err.message
+    })
+  };
+}
+
 function handleAxiosError(err: AxiosError<any, any>): APIGatewayProxyResult {
   return {
     statusCode: err.status ?? err.response?.status ?? 500,
     body: JSON.stringify({
+      type: 'Axios Error',
       cause: err.cause,
       data: err.response?.data
     })
