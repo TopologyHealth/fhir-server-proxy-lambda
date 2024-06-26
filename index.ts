@@ -22,6 +22,8 @@ const FHIR_JSON_TYPE = `application/fhir+json`
 const NDJSON_FILE_EXTENSION = `ndjson`;
 const TODAYS_DATE_STRING = getCurrentDateFormatted();
 
+require('source-map-support').install();
+
 export const handler: APIGatewayProxyHandler = async (event: APIGatewayEvent): Promise<APIGatewayProxyResult> => {
   try {
     const eventBody = event.body
