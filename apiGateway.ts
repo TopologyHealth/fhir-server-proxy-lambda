@@ -1,7 +1,7 @@
 import { Sha256 } from "@aws-crypto/sha256-js";
 import { HttpRequest } from "@aws-sdk/protocol-http";
 import { SignatureV4, SignatureV4Init } from "@aws-sdk/signature-v4";
-import axios from "axios";
+import axios, { AxiosResponse } from "axios";
 import { EventJson } from ".";
 
 export async function invokeApiGateway(tokenGatewayParams: EventJson['token_gateway'], credentials: SignatureV4Init['credentials']) {
@@ -25,12 +25,6 @@ export async function invokeApiGateway(tokenGatewayParams: EventJson['token_gate
       'emrType': tokenGatewayParams.headers.emr_type,
       'clientId': tokenGatewayParams.headers.client_id
     }
-    // ,
-    // body: JSON.stringify({
-    //   key1: 'value1',
-    //   key2: 'value2',
-    //   key3: 'value3'
-    // })
   });
 
   const signedRequest = await signer.sign(request);
@@ -40,7 +34,7 @@ export async function invokeApiGateway(tokenGatewayParams: EventJson['token_gate
     headers: signedRequest.headers,
     data: signedRequest.body
   };
-  console.log('Axios Config', axiosConfig)
-  const response = await axios(axiosConfig);
+  // console.log('Axios Config', axiosConfig)
+  const response: AxiosResponse = await axios(axiosConfig);
   return response.data;
 }

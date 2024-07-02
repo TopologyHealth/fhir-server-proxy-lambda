@@ -1,8 +1,8 @@
 import { PutObjectCommand, PutObjectCommandInput, S3, S3ClientConfig, S3ServiceException } from '@aws-sdk/client-s3';
 import { APIGatewayEvent, APIGatewayProxyHandler, APIGatewayProxyResult } from 'aws-lambda';
 import axios, { AxiosError, AxiosResponse } from 'axios';
-import { assumeRole } from "./role";
 import { invokeApiGateway } from './apiGateway';
+import { assumeRole } from "./role";
 
 type WithRequired<T, K extends keyof T> = T & { [P in K]-?: T[P] }
 export type EventJson = {
@@ -41,35 +41,36 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayEvent): P
     const eventBodyJson = eventBody as unknown as EventJson
 
     const token = await getFhirServerToken(eventBodyJson);
-    console.log('token', token)
-    // const fhirServerResponse = await makeFhirServerRequest(eventBodyJson, token);
+    // console.log('token', token)
+
+    const fhirServerResponse = await makeFhirServerRequest(eventBodyJson, token);
     const bucketWriteParams = eventBodyJson.bucket_write;
 
-    // const bucketGetResponse = async () => {
-    //   if (bucketWriteParams) {
-    //     const bucketWriteResult = await writeToBucket(bucketWriteParams, fhirServerResponse);
-    //     return {
-    //       bucketWrite: {
-    //         ...bucketWriteResult,
-    //         dateString: TODAYS_DATE_STRING
-    //       }
-    //     };
-    //   }
-    //   return {};
-    // };
+    const bucketGetResponse = async () => {
+      if (bucketWriteParams) {
+        const bucketWriteResult = await writeToBucket(bucketWriteParams, fhirServerResponse);
+        return {
+          bucketWrite: {
+            ...bucketWriteResult,
+            dateString: TODAYS_DATE_STRING
+          }
+        };
+      }
+      return {};
+    };
     const lambdaResponse = {
       statusCode: 200,
       body: {
         message: 'Request successful',
         fhirServer: {
-          headers: {},//fhirServerResponse.headers,
-          data: (bucketWriteParams ? {} : {})//fhirServerResponse.data)
+          headers: fhirServerResponse.headers,
+          data: (bucketWriteParams ? {} : fhirServerResponse.data)
         },
-        // ...(await bucketGetResponse())
+        ...(await bucketGetResponse())
       },
     };
 
-    console.log('Lambda Response: %o', lambdaResponse);
+    console.log('Response', lambdaResponse);
     return {
       ...(lambdaResponse),
       body: JSON.stringify(lambdaResponse.body)
@@ -151,20 +152,8 @@ async function makeFhirServerRequest(eventBodyJson: EventJson, token: any) {
 async function getFhirServerToken(eventBodyJson: EventJson) {
   const roleCredentials = await assumeRole(eventBodyJson.token_gateway.role.arn)
   const endpointResponse = await invokeApiGateway(eventBodyJson.token_gateway, roleCredentials)
-  // const functionRegion = eventBodyJson.token_function_region
-  // const lambda = new LambdaClient({ ...(functionRegion ? { region: functionRegion } : {}) });
-  // const tokenLambdaFunctionResponse = await lambda.send(new InvokeCommand({
-  //   FunctionName: eventBodyJson.token_function_name,
-  //   InvocationType: 'RequestResponse'
-  // }));
-
-  // const tokenLambdaPayload = tokenLambdaFunctionResponse.Payload;
-  // if (!tokenLambdaPayload) throw new Error('Payload must be defined.');
-  // const payloadAsJson = JSON.parse(Buffer.from(tokenLambdaPayload).toString());
-
-  // const token = JSON.parse(payloadAsJson.body).tokenResponse.access_token;
-
-  return endpointResponse;
+  const token = endpointResponse.tokenResponse.access_token;
+  return token;
 }
 
 function getCurrentDateFormatted(): string {
