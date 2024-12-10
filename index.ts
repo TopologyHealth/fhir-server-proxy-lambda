@@ -1,5 +1,8 @@
 import { InvokeCommand, LambdaClient } from "@aws-sdk/client-lambda";
 import { PutObjectCommand, PutObjectCommandInput, S3, S3ClientConfig, S3ServiceException } from '@aws-sdk/client-s3';
+import { AssumeRoleCommand, AssumeRoleCommandOutput, Credentials, STSClient } from "@aws-sdk/client-sts";
+import { SignatureV4Init } from "@aws-sdk/signature-v4";
+import assert from "assert";
 import { APIGatewayEvent, APIGatewayProxyHandler, APIGatewayProxyResult } from 'aws-lambda';
 import axios, { AxiosError, AxiosResponse } from 'axios';
 
@@ -7,8 +10,16 @@ type WithRequired<T, K extends keyof T> = T & { [P in K]-?: T[P] }
 type EventJson = {
   path: string,
   host: string,
-  token_function_name: string,
-  token_function_region?: string,
+  token_function_config: {
+    function_name: string,
+    function_region?: string,
+    role_getter_arn: string,
+    headers: {
+      clientId: string,
+      emrType: string,
+      scopes: string
+    }
+  }
   query_parameters?: any,
   bucket_write?: {
     bucket_name: string,
@@ -127,20 +138,62 @@ async function makeFhirServerRequest(eventBodyJson: EventJson, token: any) {
   });
 }
 
+async function assumeRole(roleArn: string) {
+  const stsClient = new STSClient();
+  const command = new AssumeRoleCommand({
+    RoleArn: roleArn,
+    RoleSessionName: "APIGatewaySession"
+  });
+
+
+  try {
+    const response = await stsClient.send(command);
+    const assumedRoleUser = response.AssumedRoleUser;
+    assert(assumedRoleUser, 'Assumed Role User must be defined');
+    return assumedRoleUser
+  } catch (e) {
+    console.error(e, 'Failed to create STS Client in order to Assume Role.')
+    throw e
+  }
+}
+
+
+
 async function getFhirServerToken(eventBodyJson: EventJson) {
-  const functionRegion = eventBodyJson.token_function_region
-  const lambda = new LambdaClient({ ...(functionRegion ? { region: functionRegion } : {}) });
+  const functionRegion = eventBodyJson.token_function_config.function_region
+  const roleGetterArn = eventBodyJson.token_function_config.role_getter_arn
+  const assumedRoleUser = await assumeRole(roleGetterArn);
+  const lambda = new LambdaClient({ ...(functionRegion ? { region: functionRegion } : {})});
   const tokenLambdaFunctionResponse = await lambda.send(new InvokeCommand({
-    FunctionName: eventBodyJson.token_function_name,
-    InvocationType: 'RequestResponse'
+    FunctionName: eventBodyJson.token_function_config.function_name,
+    InvocationType: 'RequestResponse',
+    Payload: JSON.stringify({
+      "headers": {
+        "clientId": eventBodyJson.token_function_config.headers.clientId,
+        "emrType": eventBodyJson.token_function_config.headers.emrType,
+        "scopes": eventBodyJson.token_function_config.headers.scopes
+      },
+      "requestContext": {
+        "identity": {
+          "userArn": assumedRoleUser.Arn
+        }
+      }
+    }
+    )
   }));
 
   const tokenLambdaPayload = tokenLambdaFunctionResponse.Payload;
   if (!tokenLambdaPayload) throw new Error('Payload must be defined.');
-  const payloadAsJson = JSON.parse(Buffer.from(tokenLambdaPayload).toString());
+  const tokenPayloadAsString = Buffer.from(tokenLambdaPayload).toString();
+  try {
+    const payloadAsJson = JSON.parse(tokenPayloadAsString);
+    const token = JSON.parse(payloadAsJson.body).tokenResponse.access_token;
+    return token;
+  } catch (e) {
+    console.error(e, 'Failed to Parse JSON: ', tokenPayloadAsString);
+    throw e;
+  }
 
-  const token = JSON.parse(payloadAsJson.body).tokenResponse.access_token;
-  return token;
 }
 
 function getCurrentDateFormatted(): string {

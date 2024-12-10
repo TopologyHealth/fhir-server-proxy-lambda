@@ -14,15 +14,17 @@
         "payload": {
           "json": {
             "body": {
-              "token_function_name": "arn:aws:lambda:ca-central-1:105227342372:function:backend-service-dev",
-              "token_function_region": "ca-central-1",
-              "host": "https://fhir.epic.com/interconnect-fhir-oauth/api/FHIR",
-              "path": "BulkRequest/000000000007298B4F3FA7CA1EC69594/exLAq1fI9NqTsq6t.Nk-5Sw3",
-              "bucket_write": {
-                "bucket_name": "epic-fhir-bulk-export-poc-1",
-                "resource_name": "Observation",
-                "bucket_region": "us-east-2"
-              }
+              "token_function_config": {
+                "function_name": "arn:aws:lambda:us-west-2:503561424091:function:backend-auth-lambda",
+                "role_getter_arn": "arn:aws:iam::503561424091:role/ecw-sandbox-hcpfV0-token-getter",
+                "headers": {
+                  "clientId": "hcpfV0aLoQiY_UdEdkNzl_aR9oocf7iXJPlcRrCS8H4",
+                  "emrType": "ecw-sandbox",
+                  "scopes": "system/Patient.read"
+                }
+              },
+              "host": "https://staging-fhir.ecwcloud.com/fhir/r4/FFBJCD",
+              "path": "Patient?name=Shaw&birthdate=2004-02-12"
             }
           }
         }
