@@ -104,9 +104,18 @@ function handleAxiosError(err: AxiosError<any, any>): APIGatewayProxyResult {
   return {
     statusCode: err.status ?? err.response?.status ?? 500,
     body: JSON.stringify({
-      type: 'Axios Error',
+      name: err.name,
+      code: err.code,
       cause: err.cause,
-      data: err.response?.data
+      message: err.message,
+      config: {
+        headers: {
+          Accept: err.config?.headers.Accept,
+          Prefer: err.config?.headers.Prefer
+        },
+        method: err.config?.method,
+        url: err.config?.url
+      },
     })
   };
 }
