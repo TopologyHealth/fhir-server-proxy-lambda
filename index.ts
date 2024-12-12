@@ -56,7 +56,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayEvent): P
       return {};
     };
     const lambdaResponse = {
-      statusCode: 200,
+      statusCode: fhirServerResponse.status,
       body: {
         message: 'Request successful',
         fhirServer: {
@@ -137,10 +137,12 @@ async function writeToBucket(bucketWriteParams: WithRequired<EventJson, 'bucket_
 }
 
 async function makeFhirServerRequest(eventBodyJson: EventJson, token: any) {
-  return await axios.get(`${eventBodyJson.host}/${eventBodyJson.path}`, {
+  const requestPath = eventBodyJson.path;
+  const isNonFHIRRequest = requestPath.includes('job_id')
+  return await axios.get(`${eventBodyJson.host}/${requestPath}`, {
     headers: {
       Authorization: `Bearer ${token}`,
-      Accept: FHIR_JSON_TYPE,
+      ...(isNonFHIRRequest ? {} : { Accept: FHIR_JSON_TYPE }),
       Prefer: `respond-async`
     },
     ...(eventBodyJson.query_parameters ? { params: eventBodyJson.query_parameters } : {})
