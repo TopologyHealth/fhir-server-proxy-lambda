@@ -1,14 +1,24 @@
-import { InvokeCommand, LambdaClient } from "@aws-sdk/client-lambda";
 import { PutObjectCommand, PutObjectCommandInput, S3, S3ClientConfig, S3ServiceException } from '@aws-sdk/client-s3';
 import { APIGatewayEvent, APIGatewayProxyHandler, APIGatewayProxyResult } from 'aws-lambda';
 import axios, { AxiosError, AxiosResponse } from 'axios';
+import { invokeApiGateway } from './apiGateway';
+import { assumeRole } from "./role";
 
 type WithRequired<T, K extends keyof T> = T & { [P in K]-?: T[P] }
-type EventJson = {
+export type EventJson = {
+  token_gateway: {
+    headers: {
+      client_id: string,
+      emr_type: string,
+    },
+    endpoint: string,
+    role: {
+      arn: string,
+      region: string,
+    }
+  }
   path: string,
   host: string,
-  token_function_name: string,
-  token_function_region?: string,
   query_parameters?: any,
   bucket_write?: {
     bucket_name: string,
@@ -22,6 +32,8 @@ const FHIR_JSON_TYPE = `application/fhir+json`
 const NDJSON_FILE_EXTENSION = `ndjson`;
 const TODAYS_DATE_STRING = getCurrentDateFormatted();
 
+require('source-map-support').install();
+
 export const handler: APIGatewayProxyHandler = async (event: APIGatewayEvent): Promise<APIGatewayProxyResult> => {
   try {
     const eventBody = event.body
@@ -29,6 +41,8 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayEvent): P
     const eventBodyJson = eventBody as unknown as EventJson
 
     const token = await getFhirServerToken(eventBodyJson);
+    // console.log('token', token)
+
     const fhirServerResponse = await makeFhirServerRequest(eventBodyJson, token);
     const bucketWriteParams = eventBodyJson.bucket_write;
 
@@ -56,7 +70,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayEvent): P
       },
     };
 
-    console.log('Lambda Response: %o', lambdaResponse);
+    console.log('Response', lambdaResponse);
     return {
       ...(lambdaResponse),
       body: JSON.stringify(lambdaResponse.body)
@@ -68,13 +82,10 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayEvent): P
     if (err instanceof S3ServiceException) {
       return handleS3ServiceExceptionError(err)
     }
-    const lambdaResponse = {
+    return {
       statusCode: 500,
-      body: 'Unknown Error Occurred',
-      error: err
+      body: 'Internal Server Error'
     };
-    console.error('Error handling the request: %o', lambdaResponse);
-    return lambdaResponse;
   }
 };
 
@@ -90,6 +101,17 @@ function handleS3ServiceExceptionError(err: S3ServiceException): APIGatewayProxy
 }
 
 function handleAxiosError(err: AxiosError<any, any>): APIGatewayProxyResult {
+
+  if (err.response) {
+    console.error('Error Response:', err.response.data);
+    console.error('Error Status:', err.response.status);
+    console.error('Error Headers:', err.response.headers);
+  } else if (err.request) {
+    console.error('Error Request:', err.request);
+  } else {
+    console.error('Error Message:', err.message);
+  }
+  console.error('Error Config:', err.config);
   return {
     statusCode: err.status ?? err.response?.status ?? 500,
     body: JSON.stringify({
@@ -128,18 +150,9 @@ async function makeFhirServerRequest(eventBodyJson: EventJson, token: any) {
 }
 
 async function getFhirServerToken(eventBodyJson: EventJson) {
-  const functionRegion = eventBodyJson.token_function_region
-  const lambda = new LambdaClient({ ...(functionRegion ? { region: functionRegion } : {}) });
-  const tokenLambdaFunctionResponse = await lambda.send(new InvokeCommand({
-    FunctionName: eventBodyJson.token_function_name,
-    InvocationType: 'RequestResponse'
-  }));
-
-  const tokenLambdaPayload = tokenLambdaFunctionResponse.Payload;
-  if (!tokenLambdaPayload) throw new Error('Payload must be defined.');
-  const payloadAsJson = JSON.parse(Buffer.from(tokenLambdaPayload).toString());
-
-  const token = JSON.parse(payloadAsJson.body).tokenResponse.access_token;
+  const roleCredentials = await assumeRole(eventBodyJson.token_gateway.role.arn)
+  const endpointResponse = await invokeApiGateway(eventBodyJson.token_gateway, roleCredentials)
+  const token = endpointResponse.tokenResponse.access_token;
   return token;
 }
 

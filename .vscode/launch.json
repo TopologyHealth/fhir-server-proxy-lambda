@@ -14,15 +14,24 @@
         "payload": {
           "json": {
             "body": {
-              "token_function_name": "arn:aws:lambda:ca-central-1:105227342372:function:backend-service-dev",
-              "token_function_region": "ca-central-1",
+              "token_gateway": {
+                "headers": {
+                  "client_id": "71acdb69-78ea-4cfb-b1ba-edf86fe856ce",
+                  "emr_type": "epic",
+                },
+                "endpoint": "https://9afv79c1v7.execute-api.ca-central-1.amazonaws.com/dev/token",
+                "role": {
+                  "arn": "arn:aws:iam::105227342372:role/josh-epic-sandbox-71acdb69-token-getter",
+                  "region": "ca-central-1",
+                }
+              },
               "host": "https://fhir.epic.com/interconnect-fhir-oauth/api/FHIR",
-              "path": "BulkRequest/000000000007298B4F3FA7CA1EC69594/exLAq1fI9NqTsq6t.Nk-5Sw3",
-              "bucket_write": {
-                "bucket_name": "epic-fhir-bulk-export-poc-1",
-                "resource_name": "Observation",
-                "bucket_region": "us-east-2"
-              }
+              "path": "R4/Patient/erXuFYUfucBZaryVksYEcMg3",
+              // "bucket_write": {
+              //   "bucket_name": "epic-fhir-bulk-export-poc-1",
+              //   "resource_name": "Observation",
+              //   "bucket_region": "us-east-2"
+              // }
             }
           }
         }
